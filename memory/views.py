@@ -2,21 +2,24 @@ import json
 import logging
 
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .agent import Agent
 from .models import Memory
-from .tools import remember, recall
+from .tools import remember, recall, forget
 
 logger = logging.getLogger(__name__)
 
 
+@csrf_exempt
 def health(request):
     """GET /api/health/ — confirms Django is running."""
     return JsonResponse({"status": "ok"})
 
 
 @require_http_methods(["POST"])
+@csrf_exempt
 def chat(request):
     """POST /api/chat/"""
     try:
@@ -42,6 +45,7 @@ def chat(request):
 
 
 @require_http_methods(["GET", "POST"])
+@csrf_exempt
 def memories(request):
     if request.method == "GET":
         qs = Memory.objects.order_by("-created_at").values(
@@ -77,18 +81,22 @@ def memories(request):
 
 
 @require_http_methods(["DELETE"])
+@csrf_exempt
 def memory_delete(request, memory_id):
-    """DELETE /api/memories/<id>/"""
-    try:
-        memory = Memory.objects.get(pk=memory_id)
-        memory.delete()
+    """DELETE /api/memories/<id>/ — single deletion path shared with the agent.
+
+    Delegates to tools.forget(), the same function the AI agent calls,
+    so there is one source of truth for deletion logic.
+    """
+    deleted = forget(memory_id)
+    if deleted:
         return JsonResponse({"deleted": memory_id})
-    except Memory.DoesNotExist:
-        return JsonResponse(
-            {"error": f"Memory with id {memory_id} does not exist."}, status=404
-        )
+    return JsonResponse(
+        {"error": f"Memory with id {memory_id} does not exist."}, status=404
+    )
 
 @require_http_methods(["POST"])
+@csrf_exempt
 def recall_view(request):
     try:
         body = json.loads(request.body)
