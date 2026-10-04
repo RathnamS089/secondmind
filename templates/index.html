@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecondMind - Your second brain. Runs locally.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        /* Custom scrollbar to match minimal aesthetic */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        
+        /* Markdown prose styling overrides */
+        .prose pre { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #374151; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.8125rem; }
+        .prose code { background-color: #f3f4f6; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.8125rem; }
+        .prose p { margin-bottom: 0.75em; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose ul { list-style-type: disc; padding-left: 1.25em; margin-bottom: 0.75em; }
+        .prose ol { list-style-type: decimal; padding-left: 1.25em; margin-bottom: 0.75em; }
+        
+        /* Loading dot animation */
+        .dot-flashing {
+            position: relative; width: 6px; height: 6px; border-radius: 3px; background-color: #9ca3af; color: #9ca3af;
+            animation: dot-flashing 1s infinite linear alternate; animation-delay: 0.5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: ''; display: inline-block; position: absolute; top: 0;
+            width: 6px; height: 6px; border-radius: 3px; background-color: #9ca3af; color: #9ca3af;
+            animation: dot-flashing 1s infinite alternate;
+        }
+        .dot-flashing::before { left: -10px; animation-delay: 0s; }
+        .dot-flashing::after { left: 10px; animation-delay: 1s; }
+        @keyframes dot-flashing { 0% { background-color: #9ca3af; } 50%, 100% { background-color: #e5e7eb; } }
+    </style>
+</head>
+<body class="bg-white text-gray-800 h-screen flex overflow-hidden selection:bg-gray-200">
+
+    <!-- Left Sidebar -->
+    <aside class="w-64 bg-gray-50 border-r border-gray-100 flex flex-col justify-between hidden md:flex shrink-0">
+        <div class="p-4">
+            <div class="font-semibold text-lg mb-6 text-gray-900 tracking-tight">SecondMind</div>
+            
+            <button id="btn-new-chat" class="w-full flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium transition-colors mb-6 text-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                New Chat
+            </button>
+
+            <nav class="space-y-1">
+                <button id="nav-chat" class="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-gray-200 text-gray-900 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    Chats
+                </button>
+                <button id="nav-memories" class="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    Memories
+                </button>
+                <button id="nav-settings" class="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Settings
+                </button>
+            </nav>
+        </div>
+        <div class="p-4 space-y-1">
+            <div class="flex items-center gap-2 text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> Local
+            </div>
+            <div class="text-xs text-gray-700">Qwen 2.5 1.5B</div>
+            <div class="text-[10px] text-gray-400">Powered by Ollama</div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative w-full h-full">
+        <!-- Header (Mobile menu & model selector) -->
+        <header class="h-12 flex items-center justify-between md:justify-center px-4 shrink-0">
+            <button class="md:hidden text-gray-500 hover:text-gray-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div class="text-sm font-medium text-gray-500 flex items-center gap-1 cursor-default hover:text-gray-700 transition-colors">
+                Qwen 2.5 1.5B
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <div class="w-5 md:hidden"></div>
+        </header>
+
+        <!-- View: Chat -->
+        <div id="view-chat" class="flex-1 flex flex-col overflow-hidden relative w-full">
+            <!-- Messages Stream -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto px-4 pb-36 pt-4 w-full">
+                <div class="max-w-3xl mx-auto flex flex-col space-y-8" id="chat-content">
+                    <!-- Welcome State -->
+                    <div id="welcome-state" class="flex flex-col items-center justify-center text-center mt-20 opacity-80">
+                        <h1 class="text-3xl font-semibold text-gray-800 mb-2">SecondMind</h1>
+                        <p class="text-gray-500 text-sm">Your second brain. Runs locally.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input Footer -->
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-8 pb-6 px-4">
+                <div class="max-w-3xl mx-auto relative group">
+                    <textarea id="chat-input" rows="1" class="w-full bg-gray-50 border border-gray-200 rounded-3xl pl-5 pr-14 py-3.5 focus:outline-none focus:border-gray-300 focus:bg-white resize-none max-h-48 text-gray-800 text-[15px] placeholder-gray-400 leading-relaxed shadow-sm transition-all" placeholder="Ask SecondMind anything..."></textarea>
+                    
+                    <button id="btn-send" class="absolute right-2.5 bottom-2.5 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
+                <div class="max-w-3xl mx-auto text-center mt-2">
+                    <span class="text-[10px] text-gray-400">Shift + Enter for new line. AI can make mistakes.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Memories -->
+        <div id="view-memories" class="hidden flex-1 overflow-hidden w-full">
+            <div class="max-w-3xl mx-auto w-full h-full flex flex-col px-4 pt-4 pb-10">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Memories</h2>
+                
+                <div class="relative mb-8">
+                    <svg class="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="memory-search" placeholder="Search memories..." class="w-full border-b border-gray-200 py-2 pl-7 pr-4 focus:outline-none focus:border-gray-800 text-sm text-gray-800 bg-transparent transition-colors">
+                </div>
+                
+                <div id="memories-list" class="flex-1 overflow-y-auto space-y-2 pr-2">
+                    <!-- Populated via JS -->
+                    <div class="text-sm text-gray-500 text-center mt-10">Loading memories...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Settings (Placeholder) -->
+        <div id="view-settings" class="hidden flex-1 overflow-hidden w-full">
+            <div class="max-w-3xl mx-auto w-full h-full flex flex-col px-4 pt-4 pb-10">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Settings</h2>
+                <p class="text-sm text-gray-500">Settings implementation goes here.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Elements
+        const navChat = document.getElementById('nav-chat');
+        const navMemories = document.getElementById('nav-memories');
+        const navSettings = document.getElementById('nav-settings');
+        const btnNewChat = document.getElementById('btn-new-chat');
+        
+        const viewChat = document.getElementById('view-chat');
+        const viewMemories = document.getElementById('view-memories');
+        const viewSettings = document.getElementById('view-settings');
+        
+        const chatInput = document.getElementById('chat-input');
+        const btnSend = document.getElementById('btn-send');
+        const chatContent = document.getElementById('chat-content');
+        const welcomeState = document.getElementById('welcome-state');
+        const chatMessages = document.getElementById('chat-messages');
+        
+        const memoriesList = document.getElementById('memories-list');
+        const memorySearch = document.getElementById('memory-search');
+        
+        let allMemories = [];
+
+        // --- Navigation ---
+        function switchView(viewId) {
+            viewChat.classList.add('hidden');
+            viewMemories.classList.add('hidden');
+            viewSettings.classList.add('hidden');
+            
+            navChat.classList.remove('bg-gray-200', 'text-gray-900');
+            navChat.classList.add('hover:bg-gray-100', 'text-gray-600');
+            navMemories.classList.remove('bg-gray-200', 'text-gray-900');
+            navMemories.classList.add('hover:bg-gray-100', 'text-gray-600');
+            navSettings.classList.remove('bg-gray-200', 'text-gray-900');
+            navSettings.classList.add('hover:bg-gray-100', 'text-gray-600');
+            
+            document.getElementById(viewId).classList.remove('hidden');
+            
+            if(viewId === 'view-chat') {
+                navChat.classList.add('bg-gray-200', 'text-gray-900');
+                navChat.classList.remove('hover:bg-gray-100', 'text-gray-600');
+                scrollToBottom();
+                setTimeout(() => chatInput.focus(), 100);
+            } else if (viewId === 'view-memories') {
+                navMemories.classList.add('bg-gray-200', 'text-gray-900');
+                navMemories.classList.remove('hover:bg-gray-100', 'text-gray-600');
+                fetchMemories();
+            } else if (viewId === 'view-settings') {
+                navSettings.classList.add('bg-gray-200', 'text-gray-900');
+                navSettings.classList.remove('hover:bg-gray-100', 'text-gray-600');
+            }
+        }
+
+        navChat.addEventListener('click', () => switchView('view-chat'));
+        navMemories.addEventListener('click', () => switchView('view-memories'));
+        navSettings.addEventListener('click', () => switchView('view-settings'));
+        
+        btnNewChat.addEventListener('click', () => {
+            chatContent.innerHTML = '';
+            chatContent.appendChild(welcomeState);
+            welcomeState.style.display = 'flex';
+            switchView('view-chat');
+        });
+
+        // --- Textarea auto-resize ---
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value.trim() === '') {
+                btnSend.disabled = true;
+            } else {
+                btnSend.disabled = false;
+            }
+        });
+        btnSend.disabled = true;
+
+        // --- Chat Submission ---
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        btnSend.addEventListener('click', sendMessage);
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            // Reset input
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            btnSend.disabled = true;
+            
+            // Hide welcome
+            if (welcomeState.style.display !== 'none') {
+                welcomeState.style.display = 'none';
+            }
+
+            // Append User Message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex justify-end w-full';
+            userDiv.innerHTML = `
+                <div class="bg-gray-100 text-gray-800 rounded-3xl px-5 py-2.5 max-w-[85%] text-[15px] whitespace-pre-wrap leading-relaxed shadow-sm">
+                    ${escapeHTML(text)}
+                </div>
+            `;
+            chatContent.appendChild(userDiv);
+            scrollToBottom();
+
+            // Append Loading Indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'flex justify-start w-full';
+            loadingDiv.innerHTML = `
+                <div class="text-gray-800 w-full text-[15px] max-w-none pt-2">
+                    <div class="dot-flashing ml-4 mt-2"></div>
+                </div>
+            `;
+            chatContent.appendChild(loadingDiv);
+            scrollToBottom();
+
+            // Fetch backend
+            try {
+                const res = await fetch('/api/chat/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                
+                const data = await res.json();
+                
+                // Remove loading
+                loadingDiv.remove();
+
+                // Append Assistant Message
+                const assistantDiv = document.createElement('div');
+                assistantDiv.className = 'flex justify-start w-full';
+                
+                let memoriesHtml = '';
+                if (data.memories_used && data.memories_used.length > 0) {
+                    const memItems = data.memories_used.map(m => `<div class="py-1 line-clamp-1 truncate hover:line-clamp-none hover:whitespace-normal transition-all">• ${escapeHTML(m)}</div>`).join('');
+                    memoriesHtml = `
+                        <div class="mt-3">
+                            <details class="text-[13px] text-gray-500 group">
+                                <summary class="cursor-pointer select-none hover:text-gray-700 flex items-center gap-1.5 transition-colors">
+                                    <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    ${data.memories_used.length} ${data.memories_used.length === 1 ? 'memory' : 'memories'} used
+                                </summary>
+                                <div class="mt-2 pl-5 border-l-2 border-gray-100 space-y-0.5 text-gray-400">
+                                    ${memItems}
+                                </div>
+                            </details>
+                        </div>
+                    `;
+                }
+                
+                if (data.error) {
+                    assistantDiv.innerHTML = `<div class="text-red-500 text-[15px] pt-1">Error: ${escapeHTML(data.error)}</div>`;
+                } else {
+                    const parsedMarkdown = marked.parse(data.response || '');
+                    let toolHtml = '';
+                    if (data.tool_called) {
+                         toolHtml = `<div class="mt-2 text-xs font-mono text-gray-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Agent action: ${escapeHTML(data.tool_called)}</div>`;
+                    }
+                    
+                    assistantDiv.innerHTML = `
+                        <div class="text-gray-800 w-full text-[15px] leading-relaxed prose prose-sm max-w-none pt-1">
+                            ${parsedMarkdown}
+                            ${memoriesHtml}
+                            ${toolHtml}
+                        </div>
+                    `;
+                }
+                
+                chatContent.appendChild(assistantDiv);
+                scrollToBottom();
+
+            } catch (err) {
+                loadingDiv.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'flex justify-start w-full';
+                errDiv.innerHTML = `<div class="text-red-500 text-[15px] pt-1">Request failed: ${escapeHTML(err.message || err.toString())}</div>`;
+                chatContent.appendChild(errDiv);
+                scrollToBottom();
+            }
+        }
+
+        // --- Memories List ---
+        async function fetchMemories() {
+            memoriesList.innerHTML = '<div class="text-sm text-gray-500 mt-10">Loading memories...</div>';
+            try {
+                const res = await fetch('/api/memories/');
+                const data = await res.json();
+                allMemories = data.memories || [];
+                renderMemories(allMemories);
+            } catch (e) {
+                memoriesList.innerHTML = '<div class="text-sm text-red-500 mt-10">Failed to load memories.</div>';
+            }
+        }
+
+        function renderMemories(memories) {
+            memoriesList.innerHTML = '';
+            if (memories.length === 0) {
+                memoriesList.innerHTML = '<div class="text-sm text-gray-400 mt-10">No memories found.</div>';
+                return;
+            }
+            
+            memories.forEach(mem => {
+                const el = document.createElement('div');
+                el.className = "py-4 border-b border-gray-100 flex justify-between items-start group hover:bg-gray-50 px-2 -mx-2 rounded transition-colors";
+                el.innerHTML = `
+                    <div class="pr-4">
+                        <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">${escapeHTML(mem.category)}</div>
+                        <div class="text-[14px] text-gray-800 leading-relaxed">${escapeHTML(mem.content)}</div>
+                    </div>
+                    <button onclick="deleteMemory(${mem.id})" class="text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-1">Delete</button>
+                `;
+                memoriesList.appendChild(el);
+            });
+        }
+
+        memorySearch.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            const filtered = allMemories.filter(m => 
+                m.content.toLowerCase().includes(q) || 
+                m.category.toLowerCase().includes(q)
+            );
+            renderMemories(filtered);
+        });
+
+        window.deleteMemory = async function(id) {
+            if (!confirm('Are you sure you want to forget this?')) return;
+            try {
+                await fetch(`/api/memories/${id}/`, { method: 'DELETE' });
+                allMemories = allMemories.filter(m => m.id !== id);
+                renderMemories(allMemories);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Utils
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+    });
+    </script>
+</body>
+</html>

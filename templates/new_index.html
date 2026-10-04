@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecondMind - Your second brain. Runs locally.</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+        
+        .prose pre { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #374151; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; font-size: 0.8125rem; }
+        .prose code { background-color: #f3f4f6; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.8125rem; }
+        .prose p { margin-bottom: 0.75em; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose ul { list-style-type: disc; padding-left: 1.25em; margin-bottom: 0.75em; }
+        .prose ol { list-style-type: decimal; padding-left: 1.25em; margin-bottom: 0.75em; }
+        
+        .dot-flashing {
+            position: relative; width: 6px; height: 6px; border-radius: 3px; background-color: #9ca3af; color: #9ca3af;
+            animation: dot-flashing 1s infinite linear alternate; animation-delay: 0.5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: ''; display: inline-block; position: absolute; top: 0;
+            width: 6px; height: 6px; border-radius: 3px; background-color: #9ca3af; color: #9ca3af;
+            animation: dot-flashing 1s infinite alternate;
+        }
+        .dot-flashing::before { left: -10px; animation-delay: 0s; }
+        .dot-flashing::after { left: 10px; animation-delay: 1s; }
+        @keyframes dot-flashing { 0% { background-color: #9ca3af; } 50%, 100% { background-color: #e5e7eb; } }
+    </style>
+</head>
+<body class="bg-white text-gray-800 h-screen flex overflow-hidden selection:bg-gray-200">
+
+    <aside class="w-64 bg-gray-50 border-r border-gray-100 flex flex-col justify-between hidden md:flex shrink-0">
+        <div class="p-4">
+            <div class="font-semibold text-lg mb-6 text-gray-900 tracking-tight">SecondMind</div>
+            
+            <button id="btn-new-chat" class="w-full flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-sm font-medium transition-colors mb-6 text-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                New Chat
+            </button>
+
+            <nav class="space-y-1">
+                <button id="nav-chat" class="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-gray-200 text-gray-900 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    Chat
+                </button>
+                <button id="nav-tools" class="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+                    Tools
+                </button>
+                <button id="nav-memories" class="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    Memories
+                </button>
+                <button id="nav-settings" class="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                    Settings
+                </button>
+            </nav>
+        </div>
+        <div class="p-4 space-y-1">
+            <div class="flex items-center gap-2 text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> Local
+            </div>
+            <div class="text-xs text-gray-700">Qwen 2.5 1.5B</div>
+            <div class="text-[10px] text-gray-400">Powered by Ollama</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col relative w-full h-full">
+        <!-- Header -->
+        <header class="h-12 flex items-center justify-between md:justify-center px-4 shrink-0">
+            <button class="md:hidden text-gray-500 hover:text-gray-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div class="text-sm font-medium text-gray-500 flex items-center gap-1 cursor-default hover:text-gray-700 transition-colors">
+                Qwen 2.5 1.5B
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <div class="w-5 md:hidden"></div>
+        </header>
+
+        <!-- View: Chat -->
+        <div id="view-chat" class="flex-1 flex flex-col overflow-hidden relative w-full">
+            <div id="chat-messages" class="flex-1 overflow-y-auto px-4 pb-36 pt-4 w-full">
+                <div class="max-w-3xl mx-auto flex flex-col space-y-8" id="chat-content">
+                    <div id="welcome-state" class="flex flex-col items-center justify-center text-center mt-20 opacity-80">
+                        <h1 class="text-3xl font-semibold text-gray-800 mb-2">SecondMind</h1>
+                        <p class="text-gray-500 text-sm">Your second brain. Runs locally.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-8 pb-6 px-4">
+                <div class="max-w-3xl mx-auto relative group">
+                    <textarea id="chat-input" rows="1" class="w-full bg-gray-50 border border-gray-200 rounded-3xl pl-5 pr-14 py-3.5 focus:outline-none focus:border-gray-300 focus:bg-white resize-none max-h-48 text-gray-800 text-[15px] placeholder-gray-400 leading-relaxed shadow-sm transition-all" placeholder="Ask SecondMind anything..."></textarea>
+                    <button id="btn-send" class="absolute right-2.5 bottom-2.5 p-2 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:bg-gray-200 disabled:text-gray-400 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
+                <div class="max-w-3xl mx-auto text-center mt-2">
+                    <span class="text-[10px] text-gray-400">Shift + Enter for new line. AI can make mistakes.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Tools -->
+        <div id="view-tools" class="hidden flex-1 overflow-y-auto w-full">
+            <div class="max-w-3xl mx-auto w-full h-full flex flex-col px-4 pt-4 pb-10">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-2">Tools</h2>
+                <p class="text-sm text-gray-500 mb-8">Tools let you interact directly with SecondMind's memory.</p>
+
+                <div class="space-y-4" id="tools-list">
+                    <!-- Tools populated via JS -->
+                </div>
+                
+                <div id="tool-active-area" class="mt-8 hidden">
+                    <div class="flex items-center gap-2 mb-4">
+                        <button id="btn-close-tool" class="text-gray-400 hover:text-gray-800 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        </button>
+                        <h3 class="text-lg font-semibold text-gray-800" id="tool-active-title">Tool Name</h3>
+                    </div>
+                    <div id="tool-active-content" class="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                        <!-- Content populates here -->
+                    </div>
+                    <div id="tool-active-result" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Memories -->
+        <div id="view-memories" class="hidden flex-1 overflow-hidden w-full">
+            <div class="max-w-3xl mx-auto w-full h-full flex flex-col px-4 pt-4 pb-10">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Memories</h2>
+                
+                <div class="relative mb-8">
+                    <svg class="w-4 h-4 absolute left-0 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="memory-search" placeholder="Search memories..." class="w-full border-b border-gray-200 py-2 pl-7 pr-4 focus:outline-none focus:border-gray-800 text-sm text-gray-800 bg-transparent transition-colors">
+                </div>
+                
+                <div id="memories-list" class="flex-1 overflow-y-auto space-y-2 pr-2">
+                    <div class="text-sm text-gray-500 text-center mt-10">Loading memories...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View: Settings -->
+        <div id="view-settings" class="hidden flex-1 overflow-hidden w-full">
+            <div class="max-w-3xl mx-auto w-full h-full flex flex-col px-4 pt-4 pb-10">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6">Settings</h2>
+                <p class="text-sm text-gray-500">Settings implementation goes here.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Navigation Elements
+        const navChat = document.getElementById('nav-chat');
+        const navTools = document.getElementById('nav-tools');
+        const navMemories = document.getElementById('nav-memories');
+        const navSettings = document.getElementById('nav-settings');
+        const btnNewChat = document.getElementById('btn-new-chat');
+        
+        const views = {
+            'view-chat': document.getElementById('view-chat'),
+            'view-tools': document.getElementById('view-tools'),
+            'view-memories': document.getElementById('view-memories'),
+            'view-settings': document.getElementById('view-settings')
+        };
+        
+        // Chat Elements
+        const chatInput = document.getElementById('chat-input');
+        const btnSend = document.getElementById('btn-send');
+        const chatContent = document.getElementById('chat-content');
+        const welcomeState = document.getElementById('welcome-state');
+        const chatMessages = document.getElementById('chat-messages');
+        
+        // Memory Elements
+        const memoriesList = document.getElementById('memories-list');
+        const memorySearch = document.getElementById('memory-search');
+        let allMemories = [];
+
+        // Tools Elements
+        const toolsList = document.getElementById('tools-list');
+        const toolActiveArea = document.getElementById('tool-active-area');
+        const toolActiveTitle = document.getElementById('tool-active-title');
+        const toolActiveContent = document.getElementById('tool-active-content');
+        const toolActiveResult = document.getElementById('tool-active-result');
+        const btnCloseTool = document.getElementById('btn-close-tool');
+
+        // --- Navigation ---
+        function switchView(viewId) {
+            Object.values(views).forEach(v => v.classList.add('hidden'));
+            
+            [navChat, navTools, navMemories, navSettings].forEach(nav => {
+                nav.classList.remove('bg-gray-200', 'text-gray-900');
+                nav.classList.add('hover:bg-gray-100', 'text-gray-600');
+            });
+            
+            views[viewId].classList.remove('hidden');
+            
+            if (viewId === 'view-chat') {
+                navChat.classList.add('bg-gray-200', 'text-gray-900');
+                scrollToBottom();
+                setTimeout(() => chatInput.focus(), 100);
+            } else if (viewId === 'view-tools') {
+                navTools.classList.add('bg-gray-200', 'text-gray-900');
+                renderToolsList();
+            } else if (viewId === 'view-memories') {
+                navMemories.classList.add('bg-gray-200', 'text-gray-900');
+                fetchMemories();
+            } else if (viewId === 'view-settings') {
+                navSettings.classList.add('bg-gray-200', 'text-gray-900');
+            }
+        }
+
+        navChat.addEventListener('click', () => switchView('view-chat'));
+        navTools.addEventListener('click', () => switchView('view-tools'));
+        navMemories.addEventListener('click', () => switchView('view-memories'));
+        navSettings.addEventListener('click', () => switchView('view-settings'));
+        
+        btnNewChat.addEventListener('click', () => {
+            chatContent.innerHTML = '';
+            chatContent.appendChild(welcomeState);
+            welcomeState.style.display = 'flex';
+            switchView('view-chat');
+        });
+
+        // --- Chat logic ---
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            btnSend.disabled = this.value.trim() === '';
+        });
+        btnSend.disabled = true;
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        btnSend.addEventListener('click', sendMessage);
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            btnSend.disabled = true;
+            
+            if (welcomeState.style.display !== 'none') welcomeState.style.display = 'none';
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex justify-end w-full';
+            userDiv.innerHTML = `<div class="bg-gray-100 text-gray-800 rounded-3xl px-5 py-2.5 max-w-[85%] text-[15px] whitespace-pre-wrap leading-relaxed shadow-sm">${escapeHTML(text)}</div>`;
+            chatContent.appendChild(userDiv);
+            scrollToBottom();
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'flex justify-start w-full';
+            loadingDiv.innerHTML = `<div class="text-gray-800 w-full text-[15px] max-w-none pt-2"><div class="dot-flashing ml-4 mt-2"></div></div>`;
+            chatContent.appendChild(loadingDiv);
+            scrollToBottom();
+
+            try {
+                const res = await fetch('/api/chat/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ message: text })
+                });
+                
+                const data = await res.json();
+                loadingDiv.remove();
+
+                const assistantDiv = document.createElement('div');
+                assistantDiv.className = 'flex justify-start w-full';
+                
+                let memoriesHtml = '';
+                if (data.memories_used && data.memories_used.length > 0) {
+                    const memItems = data.memories_used.map(m => `<div class="py-1 line-clamp-1 truncate hover:line-clamp-none hover:whitespace-normal transition-all">• ${escapeHTML(m)}</div>`).join('');
+                    memoriesHtml = `
+                        <div class="mt-3">
+                            <details class="text-[13px] text-gray-500 group">
+                                <summary class="cursor-pointer select-none hover:text-gray-700 flex items-center gap-1.5 transition-colors">
+                                    <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    ${data.memories_used.length} ${data.memories_used.length === 1 ? 'memory' : 'memories'} used
+                                </summary>
+                                <div class="mt-2 pl-5 border-l-2 border-gray-100 space-y-0.5 text-gray-400">${memItems}</div>
+                            </details>
+                        </div>
+                    `;
+                }
+                
+                if (data.error) {
+                    assistantDiv.innerHTML = `<div class="text-red-500 text-[15px] pt-1">Error: ${escapeHTML(data.error)}</div>`;
+                } else {
+                    const parsedMarkdown = marked.parse(data.response || '');
+                    let toolHtml = '';
+                    if (data.tool_called) {
+                         toolHtml = `<div class="mt-2 text-xs font-mono text-gray-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Agent action: ${escapeHTML(data.tool_called)}</div>`;
+                    }
+                    assistantDiv.innerHTML = `<div class="text-gray-800 w-full text-[15px] leading-relaxed prose prose-sm max-w-none pt-1">${parsedMarkdown}${memoriesHtml}${toolHtml}</div>`;
+                }
+                
+                chatContent.appendChild(assistantDiv);
+                scrollToBottom();
+            } catch (err) {
+                loadingDiv.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'flex justify-start w-full';
+                errDiv.innerHTML = `<div class="text-red-500 text-[15px] pt-1">Request failed: ${escapeHTML(err.message || err.toString())}</div>`;
+                chatContent.appendChild(errDiv);
+                scrollToBottom();
+            }
+        }
+
+        // --- Memories logic ---
+        async function fetchMemories() {
+            try {
+                const res = await fetch('/api/memories/');
+                const data = await res.json();
+                allMemories = data.memories || [];
+                renderMemories(allMemories);
+            } catch (e) {
+                memoriesList.innerHTML = '<div class="text-sm text-red-500 mt-10">Failed to load memories.</div>';
+            }
+        }
+
+        function renderMemories(memories) {
+            memoriesList.innerHTML = '';
+            if (memories.length === 0) {
+                memoriesList.innerHTML = '<div class="text-sm text-gray-400 mt-10">No memories found.</div>';
+                return;
+            }
+            
+            memories.forEach(mem => {
+                const el = document.createElement('div');
+                el.className = "py-4 border-b border-gray-100 flex justify-between items-start group hover:bg-gray-50 px-2 -mx-2 rounded transition-colors";
+                el.innerHTML = `
+                    <div class="pr-4">
+                        <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">${escapeHTML(mem.category)}</div>
+                        <div class="text-[14px] text-gray-800 leading-relaxed">${escapeHTML(mem.content)}</div>
+                    </div>
+                    <button onclick="window.deleteMemoryDirectly(${mem.id})" class="text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-1">Delete</button>
+                `;
+                memoriesList.appendChild(el);
+            });
+        }
+
+        memorySearch.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            const filtered = allMemories.filter(m => m.content.toLowerCase().includes(q) || m.category.toLowerCase().includes(q));
+            renderMemories(filtered);
+        });
+
+        window.deleteMemoryDirectly = async function(id) {
+            if (!confirm('Are you sure you want to forget this?')) return;
+            try {
+                await fetch(`/api/memories/${id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': csrfToken } });
+                await fetchMemories();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // --- Tools logic ---
+        const toolsConfig = [
+            {
+                id: 'remember',
+                icon: '🧠',
+                name: 'Remember',
+                description: 'Store something important about yourself.',
+                action: openRememberTool
+            },
+            {
+                id: 'recall',
+                icon: '🔎',
+                name: 'Recall',
+                description: 'Search your stored memories.',
+                action: openRecallTool
+            },
+            {
+                id: 'forget',
+                icon: '🗑',
+                name: 'Forget',
+                description: 'Remove something SecondMind remembers.',
+                action: openForgetTool
+            }
+        ];
+
+        function renderToolsList() {
+            toolActiveArea.classList.add('hidden');
+            toolsList.classList.remove('hidden');
+            toolsList.innerHTML = '';
+            toolsConfig.forEach(tool => {
+                const el = document.createElement('div');
+                el.className = "border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition-colors cursor-pointer group";
+                el.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex gap-4">
+                            <div class="text-2xl">${tool.icon}</div>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">${tool.name}</h3>
+                                <p class="text-sm text-gray-500 mt-1">${tool.description}</p>
+                            </div>
+                        </div>
+                        <div class="text-sm font-medium text-gray-400 group-hover:text-gray-800 transition-colors flex items-center gap-1">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></div>
+                    </div>
+                `;
+                el.addEventListener('click', () => {
+                    toolsList.classList.add('hidden');
+                    toolActiveArea.classList.remove('hidden');
+                    toolActiveTitle.textContent = `${tool.icon} ${tool.name}`;
+                    toolActiveResult.innerHTML = '';
+                    tool.action();
+                });
+                toolsList.appendChild(el);
+            });
+        }
+
+        btnCloseTool.addEventListener('click', renderToolsList);
+
+        function openRememberTool() {
+            toolActiveContent.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">What should SecondMind remember?</label>
+                        <textarea id="remember-content" rows="3" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-gray-800 bg-white" placeholder="I prefer studying DSA at night."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="remember-category" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-gray-800 bg-white">
+                            <option>General</option>
+                            <option>Personal</option>
+                            <option>Preference</option>
+                            <option>Study</option>
+                            <option>Projects</option>
+                            <option>Work</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button id="remember-cancel" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
+                        <button id="remember-save" class="px-4 py-2 text-sm font-medium bg-gray-800 text-white rounded-lg hover:bg-gray-700">Save Memory</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('remember-cancel').addEventListener('click', renderToolsList);
+            document.getElementById('remember-save').addEventListener('click', async () => {
+                const content = document.getElementById('remember-content').value.trim();
+                const category = document.getElementById('remember-category').value;
+                if (!content) return;
+                
+                toolActiveResult.innerHTML = '<p class="text-sm text-gray-500">Saving...</p>';
+                try {
+                    const res = await fetch('/api/memories/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({ content, category })
+                    });
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    
+                    renderToolsList(); // close form
+                    toolActiveArea.classList.remove('hidden'); // Keep area visible to show success
+                    toolsList.classList.add('hidden');
+                    
+                    toolActiveContent.innerHTML = `<div class="text-green-600 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Memory saved successfully.</div>`;
+                    
+                    fetchMemories(); // refresh background cache
+                } catch (e) {
+                    toolActiveResult.innerHTML = `<p class="text-sm text-red-500">Couldn't save the memory: ${escapeHTML(e.message)}</p>`;
+                }
+            });
+        }
+
+        function openRecallTool() {
+            toolActiveContent.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Search your memories</label>
+                        <input type="text" id="recall-query" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-gray-800 bg-white" placeholder="What do I usually study at night?">
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button id="recall-search" class="px-4 py-2 text-sm font-medium bg-gray-800 text-white rounded-lg hover:bg-gray-700">Search</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('recall-search').addEventListener('click', async () => {
+                const query = document.getElementById('recall-query').value.trim();
+                if (!query) return;
+                
+                toolActiveResult.innerHTML = '<p class="text-sm text-gray-500">Searching...</p>';
+                try {
+                    const res = await fetch('/api/recall/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                        body: JSON.stringify({ query })
+                    });
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    
+                    if (data.results.length === 0) {
+                        toolActiveResult.innerHTML = '<p class="text-sm text-gray-500 mt-4">No matching memories found.</p>';
+                        return;
+                    }
+                    
+                    let html = '<h4 class="font-medium text-gray-800 mt-6 mb-3">Recall results</h4><div class="space-y-3">';
+                    data.results.forEach(r => {
+                        html += `
+                            <div class="bg-white border border-gray-200 rounded p-3">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="text-[11px] font-semibold text-gray-400 uppercase">${escapeHTML(r.category)}</span>
+                                    <span class="text-xs text-gray-400 font-mono">score: ${r.score}</span>
+                                </div>
+                                <div class="text-sm text-gray-800">${escapeHTML(r.content)}</div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    toolActiveResult.innerHTML = html;
+                } catch (e) {
+                    toolActiveResult.innerHTML = `<p class="text-sm text-red-500 mt-4">Couldn't search your memories: ${escapeHTML(e.message)}</p>`;
+                }
+            });
+        }
+
+        function openForgetTool() {
+            toolActiveContent.innerHTML = '<div class="text-sm text-gray-500">Loading memories...</div>';
+            
+            fetch('/api/memories/')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.memories || data.memories.length === 0) {
+                        toolActiveContent.innerHTML = '<p class="text-sm text-gray-500">No memories to forget.</p>';
+                        return;
+                    }
+                    
+                    let html = '<div class="space-y-3 max-h-64 overflow-y-auto pr-2 mb-4">';
+                    data.memories.forEach(m => {
+                        html += `
+                            <label class="flex items-start gap-3 p-3 border border-gray-200 rounded cursor-pointer hover:bg-white transition-colors bg-gray-50">
+                                <input type="radio" name="forget_id" value="${m.id}" class="mt-1">
+                                <div>
+                                    <div class="text-sm text-gray-800">${escapeHTML(m.content)}</div>
+                                    <div class="text-[11px] text-gray-500 uppercase mt-1">${escapeHTML(m.category)}</div>
+                                </div>
+                            </label>
+                        `;
+                    });
+                    html += `</div>
+                        <div class="flex justify-end gap-3 pt-2">
+                            <button id="forget-cancel" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Cancel</button>
+                            <button id="forget-submit" class="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700">Forget selected</button>
+                        </div>`;
+                    
+                    toolActiveContent.innerHTML = html;
+                    document.getElementById('forget-cancel').addEventListener('click', renderToolsList);
+                    document.getElementById('forget-submit').addEventListener('click', async () => {
+                        const selected = document.querySelector('input[name="forget_id"]:checked');
+                        if (!selected) return;
+                        
+                        toolActiveResult.innerHTML = '<p class="text-sm text-gray-500">Deleting...</p>';
+                        try {
+                            const res = await fetch(`/api/memories/${selected.value}/`, { 
+                                method: 'DELETE',
+                                headers: { 'X-CSRFToken': csrfToken }
+                            });
+                            const delData = await res.json();
+                            if (delData.error) throw new Error(delData.error);
+                            
+                            toolActiveResult.innerHTML = `<p class="text-sm text-green-600 mt-2">✓ Memory forgotten.</p>`;
+                            openForgetTool(); // reload list
+                            fetchMemories(); // refresh background cache
+                        } catch (e) {
+                            toolActiveResult.innerHTML = `<p class="text-sm text-red-500 mt-2">Couldn't delete this memory.</p>`;
+                        }
+                    });
+                })
+                .catch(e => {
+                    toolActiveContent.innerHTML = '<p class="text-sm text-red-500">Failed to load memories.</p>';
+                });
+        }
+
+        // Utils
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    });
+    </script>
+</body>
+</html>
